@@ -33,16 +33,7 @@ shopping 150 groceries
 - **Language:** Python 3.13
 - **Bot Framework:** python-telegram-bot
 - **Database:** SQLite3
-- **Deployment:** Render (free tier)
-
-## Project Structure
-expense-tracker/
-├── main.py           # Bot handlers and logic
-├── database.py       # SQLite functions
-├── requirements.txt  # Dependencies
-├── .env             # Bot token (not in repo)
-├── .gitignore       # Ignore secrets
-└── expenses.db      # SQLite database (auto-created)
+- **Deployment:** Render 
 
 ## Installation
 
@@ -76,9 +67,6 @@ python main.py
 Search for **@cash_trackerbot** on Telegram and start using!
 
 ## Future Features
-
-- [ ] Edit expenses
-- [ ] Delete expenses
 - [ ] Budget alerts
 - [ ] Monthly export to CSV
 - [ ] Receipt uploads
