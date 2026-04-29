@@ -1,17 +1,25 @@
-# bot logic
 import os
 from dotenv import load_dotenv
 from telegram import Update
-from telegram.ext import Application,CommandHandler,MessageHandler,filters,ContextTypes
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from database import ExpenseDB
-import re
 
-#load enviro variables
+# Load environment variables (works locally with .env file)
 load_dotenv()
-BOT_TOKEN=os.getenv('TELEGRAM_BOT_TOKEN')
 
-#initialize db
-db=ExpenseDB()
+# Get token from environment
+BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+
+# Validate token exists
+if not BOT_TOKEN:
+    print("❌ ERROR: TELEGRAM_BOT_TOKEN environment variable not found!")
+    print("Make sure you set it in Render's Environment settings.")
+    exit(1)
+
+print("✅ Bot token loaded successfully")
+
+# Initialize database
+db = ExpenseDB()
 
 #helper function to parse expense
 
