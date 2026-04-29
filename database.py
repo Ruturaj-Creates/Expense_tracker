@@ -128,3 +128,43 @@ class ExpenseDB:
         filtered = [e for e in all_expenses if str(e[0]) >= str(cutoff_date)]
         
         return filtered
+    
+    def get_last_expense(self,user_id):
+        """get the most recent expense"""
+        conn=self.get_connection()
+        cursor=conn.cursor()
+
+        cursor.execute('''
+                SELECT id ,date,category,amount,description FROM expenses
+                WHERE user_id=?
+                ORDER BY created_at DESC
+                LIMIT  1
+                 ''',(user_id,))
+        
+        expense=cursor.fetchone()
+        conn.close()
+        return expense
+    
+    def delete_expense(self,expense_id,user_id):
+        """delete an expense by ID """
+        conn=self.get_connection()
+        cursor=conn.cursor()
+
+        cursor.execute(
+                'DELETE FROM expenses WHERE id = ? AND user_id = ?',
+                 (expense_id, user_id))
+        conn.commit()
+        conn.close()
+
+    def update_expense(self,expense_id,user_id,amount,category,description):
+        """Update an expense"""
+        conn=self.get_connection()
+        cursor=conn.cursor()
+
+        cursor.execute('''
+                    UPDATE expenses
+                    SET amount =?,category=?,description=?
+                    WHERE id=? AND user_id=?
+                    ''',(amount,category,description,expense_id,user_id))
+        conn.commit()
+        conn.close()

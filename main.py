@@ -60,7 +60,6 @@ Send expenses like: `lunch 280 swiggy`
 """
     await update.message.reply_text(welcome_text,parse_mode='Markdown')
 
-
 async def today(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Get today's total
@@ -72,7 +71,6 @@ async def today(update: Update, context: ContextTypes.DEFAULT_TYPE):
     total=db.get_daily_total(user_id)
 
     await update.message.reply_text(f"Today's total: ₹{total:.2f}")
-
 
 async def week(update:Update,context:ContextTypes.DEFAULT_TYPE):
     """Get last 7 days summary"""
@@ -95,10 +93,10 @@ async def week(update:Update,context:ContextTypes.DEFAULT_TYPE):
     summary += f"\n Total: ₹{total:.2f}"
     await update.message.reply_text(summary)
 
-async def help_command(update:Update,context:ContextTypes.DEFAULT_TYPE):
-    """show help"""
-    help_text="""
-*Cash Tracker Help*
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show help"""
+    help_text = """
+📖 *Cash Tracker Help*
 
 *Format:* `category amount description`
 
@@ -112,17 +110,20 @@ async def help_command(update:Update,context:ContextTypes.DEFAULT_TYPE):
 /start - Start the bot
 /today - Today's spending
 /week - Last 7 days
-/help - This help message
 /stats - Statistics
+/last - Show last expense
+/delete - Delete last expense
+/edit amount category desc - Edit last expense
+/help - This help message
 
 *Tips:*
 ✓ Amount must be a number
-✓ Category can be any word (food, travel, etc)
+✓ Category can be any word
 ✓ Description is optional
+✓ Your data is private!
 """
-
-    await update.message.reply_text(help_text,parse_mode='Markdown')
-
+    
+    await update.message.reply_text(help_text, parse_mode='Markdown')
 
 async def handle_expense(update:Update,context:ContextTypes.DEFAULT_TYPE):
     """Handle expense messages"""
@@ -182,7 +183,6 @@ async def week(update: Update, context: ContextTypes.DEFAULT_TYPE):
     summary += f"\n💵 Total: ₹{total:.2f}"
     await update.message.reply_text(summary)
 
-
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show spending statistics"""
     user = update.effective_user
@@ -211,6 +211,115 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(stats_text, parse_mode='Markdown')
 
+async def delete_last(update:Update,context=ContextTypes.DEFAULT_TYPE):
+    """delete last expense :/delete"""
+    user=update.effective_user
+    telegram_id=str(user.id)
+
+    user_id=db.get_or_create_user(telegram_id,user.first_name)
+
+    #get last expense
+    last_expense=db.get_last_expense(user_id)
+
+    if not last_expense:
+        await update.message.reply_text("❌ No expenses to delete")
+        return
+    
+    expense_id,date,category,amount,description=last_expense
+
+    #delete it
+    db.delete_expense(expense_id,user_id)
+
+    response=f"""
+🗑️ *Deleted Last Expense*
+
+📝 {category.upper()} | ₹{amount:.2f}
+📌 {description}
+📅 {date}
+
+Use /undo if this was a mistake
+"""
+    await update.message.reply_text(response,parse_mode='Markdown')
+
+async def edit_last(update:Update,context:ContextTypes.DEFAULT_TYPE):
+    """Edit last expense /edit"""   
+    user=update.effective_user
+    telegram_id=str(user.id)
+
+    user_id=db.get_or_create_user(telegram_id,user.first_name)
+
+    #get last expense
+    last_expense=db.get_last_expense(user_id)
+
+    if not last_expense:
+        await update.message.reply_text("❌ No expenses to edit")
+        return
+    expense_id,date,category,amount,description=last_expense
+
+    #parse new values from messages
+    try:
+        args=update.message.text.split(maxsplit=3)
+
+        if len(args)<2:
+            await update.message.reply_text(
+                "❌ Format: `/edit amount category description`\n" 
+                 "Example: `/edit 300 food lunch`",
+                 parse_mode='Markdown'
+            )
+            return
+        new_amount=float(args[1])
+        new_category=args[2]if len(args)>2 else category
+        new_description=args[3] if len(args)>3 else description
+
+        #update in database
+        db.update_expense(expense_id,user_id,new_amount,new_category,new_description)
+
+        response=f"""
+✏️ *Expense Updated!*
+
+📝 {new_category.upper()} | ₹{new_amount:.2f}
+📌 {new_description}
+📅 {date}
+
+Old value: ₹{amount:.2f}
+"""
+        await update.message.reply_text(response,parse_mode='Markdown')
+
+    except ValueError:
+        await update.message.reply_text(
+            "❌ Invalid format!\n\n"
+             "Use: `/edit amount category description`\n"
+             "Example: `/edit 300 food lunch`",
+             parse_mode='Markdown'
+        )
+
+async def show_last(update:Update,context:ContextTypes.DEFAULT_TYPE):
+    """show last expense /last"""
+    user=update.effective_user
+    telegram_id=str(user.id)
+
+    user_id=db.get_or_create_user(telegram_id,user.first_name)
+
+    last_expense=db.get_last_expense(user_id)
+
+    if not  last_expense:
+        await update.message.reply_text("❌ No expenses yet")
+        return
+    expense_id,date,category,amount,description=last_expense
+
+    response=f"""
+📋 *Last Expense*
+
+📝 {category.upper()} | ₹{amount:.2f}
+📌 {description}
+📅 {date}
+
+Commands:
+/delete - Delete this
+/edit amount category desc - Edit this
+"""
+    await update.message.reply_text(response,parse_mode='Markdown')
+    
 def main():
     """start the bot"""
     #create application
@@ -222,6 +331,11 @@ def main():
     application.add_handler(CommandHandler("week",week))
     application.add_handler(CommandHandler("help",help_command))
     application.add_handler(CommandHandler("stats",stats))
+    
+    # delete,edit,show last
+    application.add_handler(CommandHandler("delete",delete_last))
+    application.add_handler(CommandHandler("edit",edit_last))
+    application.add_handler(CommandHandler("last",show_last))
 
     #handle all text messages (expenses)
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND,handle_expense))
